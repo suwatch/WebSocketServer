@@ -21,19 +21,30 @@ namespace BenchmarkServer
                 .AddCommandLine(args)
                 .Build();
 
-            var host = new WebHostBuilder()
-                .UseConfiguration(config)
-                .ConfigureLogging(loggerFactory =>
-                {
-                    if (Enum.TryParse(config["LogLevel"], out LogLevel logLevel))
+            // AppService inprocess don't use kestrel
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME")))
+            {
+                var builder = WebApplication.CreateBuilder(args);
+                var app = builder.Build();
+                new Startup().Configure(app);
+                app.Run();
+            }
+            else
+            {
+                var host = new WebHostBuilder()
+                    .UseConfiguration(config)
+                    .ConfigureLogging(loggerFactory =>
                     {
-                        loggerFactory.AddConsole().SetMinimumLevel(logLevel);
-                    }
-                })
-                .UseKestrel()
-                .UseStartup<Startup>();
+                        if (Enum.TryParse(config["LogLevel"], out LogLevel logLevel))
+                        {
+                            loggerFactory.AddConsole().SetMinimumLevel(logLevel);
+                        }
+                    })
+                    .UseKestrel()
+                    .UseStartup<Startup>();
 
-            host.Build().Run();
+                host.Build().Run();
+            }
         }
     }
 }
